@@ -45,3 +45,11 @@ JsonStorage.json
 *.pem
 *.key
 *.cnf
+
+#MinIO
+/minio-s3
+
+#Redis
+/api/redis-key
+/redis/redis-data
+/redis/tests

@@ -53,14 +53,34 @@ export class RedisS3Storage implements storage.Storage {
   private updatesDir: string = path.join(__dirname, "updates");
 
   constructor() {
-    this.redisClient = new Redis();
-    this.s3Client = new S3Client({
+    this.redisClient = new Redis({
+        host: process.env.REDIS_HOST, 
+        password: process.env.REDIS_KEY,
+        tls: {
+          // Note: Node defaults CA's to those trusted by Mozilla
+          rejectUnauthorized: true, 
+          ca: fs.readFileSync(process.env.CUSTOM_REDIS_TLS_CA).toString(),
+          cert: fs.readFileSync(process.env.CUSTOM_REDIS_TLS_CRT).toString(),
+          key: fs.readFileSync(process.env.CUSTOM_REDIS_TLS_KEY).toString(),
+          servername: process.env.CUSTOM_REDIS_TLS_SERVERNAME,
+        }
+      });
+
+    const s3Config: any = {
       region: process.env.AWS_REGION,
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS,
       },
-    });
+    }
+
+    // APPEND; BONG.CHOI
+    if(process.env.CUSTOM_IS_MINIO){
+      s3Config.endpoint =  process.env.AWS_ENDPOINT || 'http://127.0.0.1:9000';
+      s3Config.forcePathStyle = true;
+    }
+
+    this.s3Client = new S3Client(s3Config);
     if (!fs.existsSync(this.updatesDir)) {
       fs.mkdirSync(this.updatesDir);
     }
@@ -537,6 +557,7 @@ export class RedisS3Storage implements storage.Storage {
       Bucket: process.env.AWS_BUCKET_NAME,
       Key: blobId,
       Body: stream,
+      ContentLength: streamLength, // APPEND; BONG.CHOI
     };
 
     return q
@@ -549,8 +570,13 @@ export class RedisS3Storage implements storage.Storage {
           .catch(reject);
       })
       .then(() => {
-        this.blobs[blobId] = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${blobId}`;
-
+        // APPEND; BONG.CHOI
+        if(process.env.CUSTOM_IS_MINIO){
+          this.blobs[blobId] = `${process.env.AWS_ENDPOINT}/${process.env.AWS_BUCKET_NAME}/${blobId}`;
+        }else{
+          this.blobs[blobId] = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${blobId}`;  
+        }
+        
         this.saveStateAsync();
 
         return blobId;

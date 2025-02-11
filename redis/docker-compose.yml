@@ -1,0 +1,40 @@
+version: '2'
+
+services:
+
+  redis-cli:
+    image: docker.io/bitnami/redis:6.2
+    user: "${UID}:${GID}"
+    entrypoint:
+      - bash
+      - -c
+      - sleep infinity
+    volumes:
+      - ./tests/tls/client:/opt/bitnami/redis/certs
+    networks:
+      - codepush-net
+
+  redis:
+    image: docker.io/bitnami/redis:6.2
+    user: "${UID}:${GID}"
+    environment:
+      - ALLOW_EMPTY_PASSWORD=false
+      - REDIS_PASSWORD=passw0rd
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+      - REDIS_TLS_CERT_FILE=/opt/bitnami/redis/certs/redis.crt
+      - REDIS_TLS_KEY_FILE=/opt/bitnami/redis/certs/redis.key
+      - REDIS_TLS_CA_FILE=/opt/bitnami/redis/certs/ca.crt
+      - REDIS_TLS_ENABLED=yes
+      - REDIS_TLS_AUTH_CLIENTS=yes
+      - REDIS_TLS_PORT_NUMBER=6379
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./tests/tls/server:/opt/bitnami/redis/certs
+      - './redis-data:/bitnami/redis/data'
+    networks:
+      - codepush-net
+
+networks:
+  codepush-net:
+    external: true

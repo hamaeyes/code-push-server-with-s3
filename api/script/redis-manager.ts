@@ -6,6 +6,8 @@ import * as express from "express";
 import * as q from "q";
 import * as redis from "redis";
 
+const fs = require("fs");
+
 import Promise = q.Promise;
 
 export const DEPLOYMENT_SUCCEEDED = "DeploymentSucceeded";
@@ -105,7 +107,11 @@ export class RedisManager {
         auth_pass: process.env.REDIS_KEY,
         tls: {
           // Note: Node defaults CA's to those trusted by Mozilla
-          rejectUnauthorized: true,
+          rejectUnauthorized: true, 
+          ca: fs.readFileSync(process.env.CUSTOM_REDIS_TLS_CA).toString(),
+          cert: fs.readFileSync(process.env.CUSTOM_REDIS_TLS_CRT).toString(),
+          key: fs.readFileSync(process.env.CUSTOM_REDIS_TLS_KEY).toString(),
+          servername: process.env.CUSTOM_REDIS_TLS_SERVERNAME,
         },
       };
       this._opsClient = redis.createClient(redisConfig);
