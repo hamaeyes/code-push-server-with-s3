@@ -47,7 +47,9 @@ JsonStorage.json
 *.cnf
 
 #MinIO
-/minio-s3
+/minio-s3/minio-data
+/minio-s3-nginx/minio-data
+/minio-s3/sample-cli
 
 #Redis
 /api/redis-key
