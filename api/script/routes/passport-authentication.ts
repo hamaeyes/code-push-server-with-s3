@@ -9,7 +9,7 @@ import * as passportBearer from "passport-http-bearer";
 import * as passportGitHub from "passport-github2";
 import * as passportWindowsLive from "passport-windowslive";
 import * as q from "q";
-import * as superagent from "superagent"
+import * as superagent from "superagent";
 import rateLimit from "express-rate-limit";
 
 import * as converterUtils from "../utils/converter";
@@ -18,6 +18,8 @@ import * as restHeaders from "../utils/rest-headers";
 import * as security from "../utils/security";
 import * as storage from "../storage/storage";
 import * as validationUtils from "../utils/validation";
+import { NoStackError } from "../no-stack-error";
+const https = require("https");
 
 import Promise = q.Promise;
 
@@ -167,17 +169,17 @@ export class PassportAuthentication {
 
     router.get("/auth/login", this._cookieSessionMiddleware, (req: Request, res: Response): any => {
       req.session["hostname"] = req.query.hostname;
-      res.render("authenticate", { action: "login" });
+      res.render("authenticate", { action: "login", isGitHubAuthenticationEnabled, isMicrosoftAuthenticationEnabled });
     });
 
     router.get("/auth/link", this._cookieSessionMiddleware, (req: Request, res: Response): any => {
       req.session["authorization"] = req.query.access_token;
-      res.render("authenticate", { action: "link" });
+      res.render("authenticate", { action: "link", isGitHubAuthenticationEnabled, isMicrosoftAuthenticationEnabled });
     });
 
     router.get("/auth/register", this._cookieSessionMiddleware, (req: Request, res: Response): any => {
       req.session["hostname"] = req.query.hostname;
-      res.render("authenticate", { action: "register" });
+      res.render("authenticate", { action: "register", isGitHubAuthenticationEnabled, isMicrosoftAuthenticationEnabled });
     });
 
     return router;
@@ -260,7 +262,7 @@ export class PassportAuthentication {
     );
 
     router.get(
-      "/auth/register/" + providerName, 
+      "/auth/register/" + providerName,
       limiter,
       this._cookieSessionMiddleware,
       (req: Request, res: Response, next: (err?: any) => void): any => {
@@ -350,8 +352,8 @@ export class PassportAuthentication {
                   const message: string = isProviderValid
                     ? "You are already registered with the service using this authentication provider.<br/>Please cancel the registration process (Ctrl-C) on the CLI and login with your account."
                     : "You are already registered with the service using a different authentication provider." +
-                    "<br/>Please cancel the registration process (Ctrl-C) on the CLI and login with your registered account." +
-                    "<br/>Once logged in, you can optionally link this provider to your account.";
+                      "<br/>Please cancel the registration process (Ctrl-C) on the CLI and login with your registered account." +
+                      "<br/>Once logged in, you can optionally link this provider to your account.";
                   restErrorUtils.sendAlreadyExistsPage(res, message);
                   return;
                 case "link":
@@ -393,7 +395,7 @@ export class PassportAuthentication {
                   restErrorUtils.sendForbiddenPage(
                     res,
                     "We weren't able to link your account, because the primary email address registered with your provider does not match the one on your CodePush account." +
-                    "<br/>Please use a matching email address, or contact us if you'd like to change the email address on your CodePush account."
+                      "<br/>Please use a matching email address, or contact us if you'd like to change the email address on your CodePush account."
                   );
                   return;
                 case "register":
@@ -442,15 +444,70 @@ export class PassportAuthentication {
       clientID: gitHubClientId,
       clientSecret: gitHubClientSecret,
       callbackURL: this.getCallbackUrl(providerName),
-      scope: ["user:email"],
+      scope: ["user:email", "read:org"], // BG.CHOI APPEND
       state: true,
     };
+
+    // passport.use(
+    //   new passportGitHub.Strategy(
+    //     options,
+    //     (accessToken: string, refreshToken: string, profile: passportGitHub.Profile, done: (err?: any, user?: any) => void): void => {
+    //       done(/*err*/ null, profile);
+    //     }
+    //   )
+    // );
 
     passport.use(
       new passportGitHub.Strategy(
         options,
         (accessToken: string, refreshToken: string, profile: passportGitHub.Profile, done: (err?: any, user?: any) => void): void => {
-          done(/*err*/ null, profile);
+          // -- BG.CHOI APPEND --
+          const orgName: string = process.env["GITHUB_ORGINIZATIONS_NAME"] || "codepush-org";
+          const options = {
+            hostname: "api.github.com",
+            path: `/orgs/${orgName}/members/${profile.username}`,
+            method: "GET",
+            headers: {
+              Authorization: "Bearer " + accessToken,
+              Accept: "application/vnd.github+json",
+              "User-Agent": "My-Code-Push",
+            },
+          };
+
+          // 정상적인 응답을 처리하는 함수
+          function handleSuccess(responseData) {
+            console.log("✅ 성공:", responseData);
+            done(/*err*/ null, profile);
+          }
+
+          // 에러를 처리하는 함수
+          function handleError(error) {
+            console.error("❌ 에러:", error);
+            done(error, profile);
+          }
+
+          const req = https.request(options, (res) => {
+            let data = "";
+            res.on("data", (chunk) => (data += chunk));
+            res.on("end", () => {
+              console.log("Response:", data);
+              if (res.statusCode === 204) {
+                handleSuccess(data);
+              } else {
+                handleError(new NoStackError(`접근이 제한되는 멤버 입니다!. 오류 코드:${res.statusCode}`));
+              }
+            });
+          });
+
+          // 일반적이지 않는, 알수 없는 에러!
+          req.on("error", (error) => {
+            console.error("Error:", error);
+            handleError(error);
+          });
+
+          req.end();
+
+          // -- BG.CHOI APPEND --
         }
       )
     );
@@ -488,7 +545,9 @@ export class PassportAuthentication {
       redirectUrl: this.getCallbackUrl(providerName),
       clientID: microsoftClientId,
       clientSecret: microsoftClientSecret,
-      identityMetadata: "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
+      identityMetadata: `https://login.microsoftonline.com/${
+        process.env["MICROSOFT_TENANT_ID"] || "common"
+      }/v2.0/.well-known/openid-configuration`,
       responseMode: "query",
       responseType: "code",
       scope: ["email", "profile"],
