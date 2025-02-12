@@ -1,4 +1,4 @@
-version: '3.9'
+version: '2'
 
 services:
   master:
@@ -8,6 +8,9 @@ services:
       - 19333:19333
       - 9324:9324
     command: "master -ip=master -ip.bind=0.0.0.0 -metricsPort=9324"
+    networks:
+      - codepush-net
+
   volume:
     image: chrislusf/seaweedfs # use a remote image
     ports:
@@ -17,8 +20,9 @@ services:
     volumes:
       - ./data:/data
     command: 'volume -mserver="master:9333" -ip.bind=0.0.0.0 -port=8080  -metricsPort=9325'
-    depends_on:
-      - master
+    networks:
+      - codepush-net
+
   filer:
     image: chrislusf/seaweedfs # use a remote image
     ports:
@@ -30,28 +34,26 @@ services:
     command: 'filer -master="master:9333" -ip.bind=0.0.0.0 -metricsPort=9326'
     tty: true
     stdin_open: true
-    depends_on:
-      - master
-      - volume
+    networks:
+      - codepush-net
+
   s3:
     image: chrislusf/seaweedfs # use a remote image
     ports:
       - 9327:9327
     #  - 8333:8333
     command: 's3 -filer="filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327'
-    depends_on:
-      - master
-      - volume
-      - filer
+    networks:
+      - codepush-net
+
   webdav:
     image: chrislusf/seaweedfs # use a remote image
     ports:
       - 7333:7333
     command: 'webdav -filer="filer:8888"'
-    depends_on:
-      - master
-      - volume
-      - filer
+    networks:
+      - codepush-net
+
   prometheus:
     image: prom/prometheus:v2.21.0
     #ports:
@@ -59,8 +61,9 @@ services:
     volumes:
       - ./prometheus:/etc/prometheus
     command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yml
-    depends_on:
-      - s3
+    networks:
+      - codepush-net
+
   nginx:
     image: nginx:1.19.2-alpine
     hostname: nginx
@@ -69,6 +72,9 @@ services:
     ports:
       - "8333:8333"
       - "9000:9090"
-    depends_on:
-      - s3
-      - prometheus
+    networks:
+      - codepush-net
+ 
+networks:
+  codepush-net:
+    external: true    

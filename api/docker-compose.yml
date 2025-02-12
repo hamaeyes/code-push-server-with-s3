@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  codepush-api:
+    container_name: codepush-api
+    build:
+      context: ./
+    image: bgchoi.github.com/codepush/api2
+    ports:
+      - 3000:3000
+    networks:
+      - codepush-net
+networks:
+  codepush-net:
+    external: true

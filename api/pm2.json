@@ -1,0 +1,14 @@
+{
+  "name": "app",
+  "script": "./bin/script/server.js",
+  "args": "dotenv_config_path=.env dotenv_config_silent=true",
+  "node_args": "-r dotenv/config",
+  "exec_mode": "cluster",
+  "instances": "max",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "env_production": {
+    "NODE_ENV": "production"
+  }
+}
