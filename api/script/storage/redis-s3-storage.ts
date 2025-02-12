@@ -75,7 +75,7 @@ export class RedisS3Storage implements storage.Storage {
     }
 
     // APPEND; BONG.CHOI
-    if(process.env.CUSTOM_IS_MINIO){
+    if(!process.env.IS_AWS_S3){
       s3Config.endpoint =  process.env.AWS_ENDPOINT || 'http://127.0.0.1:9000';
       s3Config.forcePathStyle = true;
     }
@@ -571,7 +571,7 @@ export class RedisS3Storage implements storage.Storage {
       })
       .then(() => {
         // APPEND; BONG.CHOI
-        if(process.env.CUSTOM_IS_MINIO){
+        if(!process.env.IS_AWS_S3){
           this.blobs[blobId] = `${process.env.AWS_ENDPOINT}/${process.env.AWS_BUCKET_NAME}/${blobId}`;
         }else{
           this.blobs[blobId] = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${blobId}`;  

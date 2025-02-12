@@ -46,12 +46,22 @@ JsonStorage.json
 *.key
 *.cnf
 
-#MinIO
+# ----------------------
+# StorageData
+# ----------------------
+# - MinIo
 /minio-s3/minio-data
 /minio-s3-nginx/minio-data
 /minio-s3/sample-cli
 
-#Redis
+# - SeaweedFS
+/seaweedfs-s3/data
+/seaweedfs-s3/filer
+/seaweedfs-s3-nginx/data
+/seaweedfs-s3-nginx/filer
+
+# - Redis 
 /api/redis-key
 /redis/redis-data
 /redis/tests
+
