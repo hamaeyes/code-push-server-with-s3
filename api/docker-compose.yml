@@ -5,8 +5,8 @@ services:
     build:
       context: ./
     image: bgchoi.github.com/codepush/api2
-    ports:
-      - 3000:3000
+    #ports:
+    #  - 3000:3000
     networks:
       - codepush-net
 networks:

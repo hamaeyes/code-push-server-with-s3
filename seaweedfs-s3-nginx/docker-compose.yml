@@ -70,8 +70,9 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
+      - "3000:3000"
       - "8333:8333"
-      - "9000:9090"
+      - "9090:9090"
     networks:
       - codepush-net
  
