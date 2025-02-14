@@ -13,6 +13,13 @@ import * as express from "express";
 import * as q from "q";
 import { RedisS3Storage } from "./storage/redis-s3-storage";
 
+// RerdisSession 
+const session = require('express-session');
+const RedisStore = require('connect-redis')(session); // 구버전 방식
+const redis = require('redis');
+
+const fs = require("fs");
+
 interface Secret {
   id: string;
   value: string;
@@ -43,7 +50,24 @@ export function start(done: (err?: any, server?: express.Express, storage?: Stor
       const auth = api.auth({ storage: storage });
       const appInsights = api.appInsights();
       const redisManager = new RedisManager();
-      // First, to wrap all requests and catch all exceptions.
+      const redisClient = redis.createClient({ 
+          host: process.env.REDIS_HOST,
+          port: process.env.REDIS_PORT,
+          auth_pass: process.env.REDIS_KEY,
+          tls: {
+            // Note: Node defaults CA's to those trusted by Mozilla
+            rejectUnauthorized: true, 
+            ca: fs.readFileSync(process.env.CUSTOM_REDIS_TLS_CA).toString(),
+            cert: fs.readFileSync(process.env.CUSTOM_REDIS_TLS_CRT).toString(),
+            key: fs.readFileSync(process.env.CUSTOM_REDIS_TLS_KEY).toString(),
+            servername: process.env.CUSTOM_REDIS_TLS_SERVERNAME,
+          }
+      });
+      redisClient.on('connect', () => console.log('🚀 Redis 연결 완료!'));
+      redisClient.on('error', (err) => console.error('❌ Redis 오류:', err));
+      let redisStore = new RedisStore({client:redisClient, prefix: 'session:'});
+ 
+      
       app.use(domain);
 
       // Monkey-patch res.send and res.setHeader to no-op after the first call and prevent "already sent" errors.
@@ -110,8 +134,10 @@ export function start(done: (err?: any, server?: express.Express, storage?: Stor
       app.set("views", __dirname + "/views");
       app.set("view engine", "ejs");
       app.use("/auth/images/", express.static(__dirname + "/views/images"));
+      app.set('trust proxy', true);
       app.use(api.headers({ origin: process.env.CORS_ORIGIN || "http://localhost:4000" }));
       app.use(api.health({ storage: storage, redisManager: redisManager }));
+      
 
       if (process.env.DISABLE_ACQUISITION !== "true") {
         app.use(api.acquisition({ storage: storage, redisManager: redisManager }));
@@ -140,6 +166,17 @@ export function start(done: (err?: any, server?: express.Express, storage?: Stor
       } else {
         app.use(auth.legacyRouter());
       }
+
+      // --- Redis Session ---
+      app.use(session({
+        store: redisStore,
+        secret: 'your-secret-key',  // 필수!
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          secure: false,  // 개발환경에서는 false, 프로덕션에서는 true
+        },
+      }));
 
       // Error handler needs to be the last middleware so that it can catch all unhandled exceptions
       app.use(appInsights.errorHandler);

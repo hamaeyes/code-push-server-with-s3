@@ -134,6 +134,9 @@ export class RedisManager {
     }
   }
 
+  public getRedisClient():redis.RedisClient  {
+    return this._opsClient;
+  }
   public get isEnabled(): boolean {
     return !!this._opsClient && !!this._metricsClient;
   }
@@ -336,4 +339,6 @@ export class RedisManager {
       })
       .then(() => {});
   }
+
+  
 }
