@@ -756,4 +756,9 @@ export class JsonStorage implements storage.Storage {
   private static getRejectedPromise(errorCode: storage.ErrorCode, message?: string): Promise<any> {
     return q.reject(storage.storageError(errorCode, message));
   }
+
+  // APPEND - BONG
+  public reloadStateAsync(): Promise<void> {
+    return q(<void>null);
+  }
 }

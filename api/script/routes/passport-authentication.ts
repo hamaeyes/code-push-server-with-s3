@@ -19,7 +19,7 @@ import * as security from "../utils/security";
 import * as storage from "../storage/storage";
 import * as validationUtils from "../utils/validation";
 import { NoStackError } from "../no-stack-error";
-const https = require("https");
+const https = require("https");  
 
 import Promise = q.Promise;
 
@@ -62,21 +62,29 @@ export class PassportAuthentication {
       signed: false,
       overwrite: true,
     });
+
     this._storageInstance = config.storage;
 
     passport.use(
       new passportBearer.Strategy((accessKey: string, done: (error: any, user?: any) => void) => {
+        
         if (!validationUtils.isValidKeyField(accessKey)) {
           done(/*err*/ null, /*user*/ false);
           return;
         }
 
+        // APPEND - BONG 
         this._storageInstance
-          .getAccountIdFromAccessKey(accessKey)
-          .then((accountId: string) => {
-            done(/*err*/ null, { id: accountId });
+          .reloadStateAsync()
+          .then(() => {
+            this._storageInstance
+            .getAccountIdFromAccessKey(accessKey)
+            .then((accountId: string) => {
+              done(/*err*/ null, { id: accountId });
+            })
+            .catch((error: storage.StorageError): void => PassportAuthentication.storageErrorHandler(error, done))
+            .done();
           })
-          .catch((error: storage.StorageError): void => PassportAuthentication.storageErrorHandler(error, done))
           .done();
       })
     );
@@ -139,6 +147,7 @@ export class PassportAuthentication {
     const router: Router = Router();
 
     router.use(passport.initialize());
+    //router.use(passport.session());
 
     router.get("/authenticated", limiter, this.authenticate, (req: Request, res: Response): any => {
       res.send({ authenticated: true });
@@ -167,7 +176,7 @@ export class PassportAuthentication {
       this.setupAzureAdRoutes(router, microsoftClientId, microsoftClientSecret);
     }
 
-    router.get("/auth/login", this._cookieSessionMiddleware, (req: Request, res: Response): any => {
+    router.get("/auth/login",this._cookieSessionMiddleware, (req: Request, res: Response): any => {
       req.session["hostname"] = req.query.hostname;
       res.render("authenticate", { action: "login", isGitHubAuthenticationEnabled, isMicrosoftAuthenticationEnabled });
     });
@@ -508,6 +517,7 @@ export class PassportAuthentication {
           req.end();
 
           // -- BG.CHOI APPEND --
+          
         }
       )
     );

@@ -87,6 +87,22 @@ export class RedisS3Storage implements storage.Storage {
     this.loadStateAsync();
   }
 
+  // APPEND - BONG 
+  public reloadStateAsync(): Promise<void> {
+    return q
+      .Promise<string>((resolve, reject) => {
+        this.loadStateAsync()
+          .then(() => {
+            resolve();
+          })
+          .catch(reject);
+      })
+      .then(() => {
+        return;
+      }); 
+  }
+
+  // APPEND - BONG 
   private loadStateAsync(): globalThis.Promise<void> {
     return this.redisClient.get("state").then((state) => {
       if (!state) {

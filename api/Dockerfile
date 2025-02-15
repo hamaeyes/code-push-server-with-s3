@@ -1,4 +1,4 @@
-FROM node:20.18-alpine
+FROM node:23.6-alpine
 
 # Bundle APP files
 RUN mkdir -p /app

@@ -1474,4 +1474,9 @@ export class AzureStorage implements storage.Storage {
 
     return null;
   }
+
+  // APPEND - BONG 
+  public reloadStateAsync(): q.Promise<void> {
+    return q(<void>null);
+  }
 }

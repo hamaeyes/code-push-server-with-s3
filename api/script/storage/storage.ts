@@ -169,6 +169,9 @@ export interface Storage {
   updateAccessKey(accountId: string, accessKey: AccessKey): Promise<void>;
 
   dropAll(): Promise<void>;
+
+  // ADD BONG
+  reloadStateAsync(): Promise<void>;
 }
 
 export function clone<T>(source: T): T {
