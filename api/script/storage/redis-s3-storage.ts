@@ -5,7 +5,7 @@ import * as express from "express";
 import * as fs from "fs";
 import * as http from "http";
 import * as q from "q";
-import * as stream from "stream";
+import * as stream from "stream"; 
 
 import * as storage from "./storage";
 
@@ -14,6 +14,7 @@ import Promise = q.Promise;
 import { isPrototypePollutionKey } from "./storage";
 import path = require("path");
 import Redis from "ioredis";
+import { Upload } from "@aws-sdk/lib-storage";
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 function merge(original: any, updates: any): void {
@@ -72,13 +73,16 @@ export class RedisS3Storage implements storage.Storage {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS,
       },
-    }
+    } 
 
     // APPEND; BONG.CHOI
-    if(!process.env.IS_AWS_S3){
-      s3Config.endpoint =  process.env.AWS_ENDPOINT || 'http://127.0.0.1:9000';
-      s3Config.forcePathStyle = true;
-    }
+
+   if(process.env.IS_AWS_S3 == 'false'){ 
+      s3Config.endpoint =  process.env.AWS_ENDPOINT || 'http://localhost:8333';
+      s3Config.forcePathStyle = true; 
+   }
+
+    console.log('endpoint(*): ' + s3Config.endpoint);
 
     this.s3Client = new S3Client(s3Config);
     if (!fs.existsSync(this.updatesDir)) {
@@ -574,24 +578,49 @@ export class RedisS3Storage implements storage.Storage {
       Key: blobId,
       Body: stream,
       ContentLength: streamLength, // APPEND; BONG.CHOI
-    };
+    }; 
 
     return q
       .Promise<string>((resolve, reject) => {
-        this.s3Client
-          .send(new PutObjectCommand(params))
-          .then(() => {
-            resolve(blobId);
-          })
-          .catch(reject);
+        // OLD-VERSION
+        // this.s3Client
+        //   .send(new Uploa(params))
+        //   .then(() => {
+        //     console.log('Command Commit---');
+        //     resolve(blobId);
+        //   })
+        //   .catch(reject);
+
+        console.log('bucket:' + process.env.AWS_BUCKET_NAME);
+        console.log('blobId:' + blobId);
+
+        const upload = new Upload({
+            client: this.s3Client,
+            params: {
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: blobId,
+                Body: stream,
+            },
+        });
+
+        // APPEND; BONG.CHOI 
+        upload.done()
+        .then((data) => {
+          console.log("(*) Upload complete:", data); 
+          resolve(blobId);
+        })
+        .catch(reject);
+
       })
       .then(() => {
         // APPEND; BONG.CHOI
-        if(!process.env.IS_AWS_S3){
-          this.blobs[blobId] = `${process.env.AWS_ENDPOINT}/${process.env.AWS_BUCKET_NAME}/${blobId}`;
+        if(process.env.IS_AWS_S3 == 'false'){
+          this.blobs[blobId] = `${process.env.AWS_EXT_ENDPOINT}/${process.env.AWS_BUCKET_NAME}/${blobId}`;
         }else{
           this.blobs[blobId] = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${blobId}`;  
         }
+
+        console.log(`SavedBucketUrl = ${this.blobs[blobId]}`);
         
         this.saveStateAsync();
 
