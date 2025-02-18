@@ -444,7 +444,7 @@ export class RedisS3Storage implements storage.Storage {
   }
 
   public getPackageHistoryFromDeploymentKey(deploymentKey: string): Promise<storage.Package[]> {
-    console.log(this.deploymentKeyToDeploymentMap);
+    console.log(` this.deploymentKeyToDeploymentMap =  ${this.deploymentKeyToDeploymentMap}`);
     const deploymentId: string = this.deploymentKeyToDeploymentMap[deploymentKey];
     if (!deploymentId || !this.deployments[deploymentId]) {
       return RedisS3Storage.getRejectedPromise(storage.ErrorCode.NotFound);

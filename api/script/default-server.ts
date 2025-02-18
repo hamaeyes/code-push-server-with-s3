@@ -116,7 +116,17 @@ export function start(done: (err?: any, server?: express.Express, storage?: Stor
 
       app.get("/", (req: express.Request, res: express.Response, next: (err?: Error) => void): any => {
         res.send("Welcome to the CodePush REST API! --- ");
+      });
 
+      app.use((req: express.Request, res: express.Response, next: (err?: any) => void): any => {
+        if(!req.url.startsWith("/v0.1/public")){
+          next();
+        }
+        else{
+          storage.reloadStateAsync()
+          .then(() => next())
+          .catch(error => next());
+        }
       });
 
       app.set("etag", false);

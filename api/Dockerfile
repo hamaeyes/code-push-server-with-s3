@@ -19,6 +19,9 @@ COPY standalone-run.sh .
 COPY .env-docker ./.env
 
 ENV NPM_CONFIG_LOGLEVEL warn
+ENV TEMP=/tmp
+ENV TMPDIR=/tmp
+
 RUN npm install pm2 -g
 RUN npm install
 RUN npm run build 
