@@ -42,11 +42,9 @@ services:
     ports:
       - 9327:9327
     #  - 8333:8333
-    command: 's3 -filer="filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327'
-    #environment:
-    #  - WEED_S3=true
-    #  - WEED_S3_TIMEOUT=300  # 5분 timeout 설정
-    #  - WEED_S3_ENDPOINT=s3:8333
+    volumes:
+      - ./s3.json:/etc/seaweedfs/s3.json # S3 인증 정보 파일 추가
+    command: 's3 -filer="filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327 -config=/etc/seaweedfs/s3.json'
     networks:
       - codepush-net
 
@@ -74,8 +72,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "3000:3000"
       - "8333:8333"
+      - "3000:3000"
       - "9090:9090"
     networks:
       - codepush-net

@@ -60,6 +60,7 @@ JsonStorage.json
 /seaweedfs-s3/filer
 /seaweedfs-s3-nginx/data
 /seaweedfs-s3-nginx/filer
+/seaweedfs-s3-nginx/s3.json
 
 # - Redis 
 /api/redis-key
